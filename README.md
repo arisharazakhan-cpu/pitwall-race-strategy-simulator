@@ -2,8 +2,6 @@
 
 **Cloud-hosted Formula 1 race-strategy and telemetry-resilience simulator powered by OpenF1 data and Monte Carlo modeling.**
 
-[Launch the live demo](https://pitwall-race-strategy.arisharazakhan.chatgpt.site)
-
 PitWall recreates a race engineer's decision surface and the reliability controls behind it. Select a driver, scrub through a Grand Prix lap by lap, test a tyre compound and pit window, then deliberately break the telemetry pipeline and watch PitWall preserve the last trusted race state.
 
 The default experience is a playable **Race Engineer Mission**: advance a live race, watch cars move around the circuit, issue pace commands, respond to race events, call a pit stop, compare against a ghost strategy, and receive an explainable engineering score at the chequered flag.
