@@ -1,111 +1,114 @@
-# PitWall
+<div align="center">
 
-**Cloud-hosted Formula 1 race-strategy and telemetry-resilience simulator powered by OpenF1 data and Monte Carlo modeling.**
+# PITWALL
 
-PitWall recreates a race engineer's decision surface and the reliability controls behind it. Select a driver, scrub through a Grand Prix lap by lap, test a tyre compound and pit window, then deliberately break the telemetry pipeline and watch PitWall preserve the last trusted race state.
+### Interactive F1 race strategy and telemetry-resilience simulator
 
-The default experience is a playable **Race Engineer Mission**: advance a live race, watch cars move around the circuit, issue pace commands, respond to race events, call a pit stop, compare against a ghost strategy, and receive an explainable engineering score at the chequered flag.
+[![Engineering quality](https://github.com/arisharazakhan-cpu/pitwall-race-strategy-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/arisharazakhan-cpu/pitwall-race-strategy-simulator/actions/workflows/ci.yml)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
+[![Tests](https://img.shields.io/badge/tests-11%20passing-49E68F)](#verification)
+[![License](https://img.shields.io/badge/license-MIT-white)](LICENSE)
 
-## Engineering highlights
+Make the call. Watch the race change. Defend the result.
 
-- Synchronizes **7 OpenF1 endpoints** for sessions, drivers, laps, positions, intervals, tyre stints, and weather across **five circuit profiles**.
-- Reconstructs lap-aligned race snapshots across the full driver field, keeping positions, gaps, tyres, pace, and conditions on the same timestamp.
-- Runs reproducible **1,000-path decisions** or an asynchronous **100,000-path stress test** with live convergence telemetry.
-- Produces expected finishing position, time delta, podium and win probabilities, an **80% outcome interval**, and undercut/hold/overcut comparisons.
-- Routes OpenF1 through a **Cloudflare Workers-compatible edge API** with input validation, request timeouts, cache control, stale-while-revalidate behavior, and correlation IDs.
-- Includes a temporal-holdout **Backtest Lab** that freezes inputs at a chosen lap, seals future data, and scores the prediction against the observed result.
-- Includes a backend **failure-injection lab** for upstream outages, measured latency, telemetry tampering, replay storms, and weather-feed loss.
-- Implements circuit-breaking behavior, last-known-good cache failover, schema/range validation, event deduplication, confidence penalties, and an immutable-style operational audit view.
+</div>
 
-## Interactive features
+![PitWall race engineer mission](docs/assets/pitwall-demo.jpg)
 
-- Three replayable missions: Silverstone weather crossover, Monaco undercut, and Singapore safety-car timing
-- Fixed scenario seeds for reproducible race state and pit-stop variance
-- Pause and 1×/2×/4× race speed
-- Animated car movement, timing tower, lap progress, rain front, and tyre wear
-- Decision interruptions for weather crossover and attack windows
-- Working BOX command with pit-stop delay, tyre change, rejoin loss, and radio confirmation
-- PUSH, BALANCED, and CONSERVE driver modes that alter pace and degradation
-- Live alternative-strategy ghost with changing time delta
-- Transparent 100-point scoring across position, compound, timing, pace, risk, and reaction time
-- Post-race decision analysis comparing the player's call against the modeled optimum
-- Lap-by-lap historical race replay
-- Driver selection and running-order tracking
-- Real pace-delta visualization
-- Tyre compound and pit-lap controls
-- Dry, light-rain, and heavy-rain scenarios
-- Safety-car strategy modeling
-- Track-position and weather visualizations
-- Seeded simulations for reproducible comparisons
-- Telemetry Trust Center with health, latency, queue, integrity, cache, and circuit-breaker metrics
-- Controlled cyber-resilience scenarios that visibly affect model confidence and data-source state
-- Multi-circuit modeling for Silverstone, Monaco, Monza, Spa, and Singapore
-- Per-factor model explanations for tyre pace, degradation, pit timing, traffic, weather, and safety-car effects
-- Future-data locking and observed-result reveal for honest historical validation
+## The experience
 
-## Architecture
+PitWall puts the player on the pit wall—not in front of a passive dashboard. Advance a live race, monitor moving cars and timing gaps, change driver pace, react to weather and safety-car interruptions, select the next tyre, call **BOX**, and compare the result against a live model ghost.
+
+Every mission is deterministic and replayable. The chequered-flag result explains whether the call worked, where time was won or lost, and whether the mission objective was actually achieved. Finishing P4 in a podium mission is a failed mission, regardless of score.
+
+| Mission | Decision pressure | Objective |
+| --- | --- | --- |
+| **The Crossover · Silverstone** | Mixed-weather tyre timing | Protect a podium |
+| **The Undercut · Monaco** | Track position and traffic | Jump the car ahead |
+| **The Neutralization · Singapore** | Safety-car pit timing | Convert the free stop |
+
+## Why it is technically interesting
+
+- **Live decision loop** — pause, 1×/2×/4× playback, animated circuit positions, changing gaps, tyre wear, rain, radio messages, pace commands, pit stops, and rejoin loss.
+- **Probabilistic strategy engine** — reproducible 1,000-path decisions plus an asynchronous 100,000-path browser stress test with convergence telemetry.
+- **Real race ingestion** — seven OpenF1 datasets are aligned into lap-level snapshots for the full driver field.
+- **Honest backtesting** — inputs freeze at a selected lap, future data stays sealed, and the prediction is scored only after the observed result is revealed.
+- **Resilient telemetry path** — schema checks, range validation, event deduplication, request timeouts, trusted-cache fallback, confidence penalties, and circuit-breaking behavior.
+- **Controlled failure lab** — inject an outage, latency spike, corrupted event, replay storm, or weather-feed loss and watch the system degrade visibly without silently trusting bad data.
+- **Explainable outcomes** — exposes tyre pace, degradation, traffic, pit timing, weather, safety-car effects, confidence, and an 80% outcome interval.
+
+## System design
 
 ```mermaid
-flowchart LR
-    OF1[OpenF1 API] --> EDGE[Edge ingestion API]
-    EDGE --> VALIDATE[Validate + deduplicate]
-    VALIDATE --> CACHE[Trusted snapshot cache]
-    CACHE --> UI[React RaceOps dashboard]
-    UI --> SIM[Monte Carlo + explanation engine]
-    SIM --> UI
-    UI --> BT[Temporal-holdout backtest]
+flowchart TD
+    OF1[OpenF1 telemetry] --> API[Validated ingestion route]
+    API --> SNAP[Lap-aligned trusted snapshots]
+    SNAP --> GAME[Interactive race mission]
+    SNAP --> BACK[Temporal-holdout backtest]
+    GAME --> SIM[Monte Carlo strategy engine]
+    SIM --> SCORE[Outcome, confidence, and explanation]
+    API -. failure injection .-> TRUST[Trust controls and cache fallback]
+    TRUST --> GAME
 ```
 
-The edge API discovers the race session and retrieves the seven required datasets with paced requests. It validates the upstream schema, aligns timing records by race timestamp, builds a trusted snapshot for every lap, and returns a cacheable replay dataset. A read-only direct transport remains available as a continuity fallback if the edge route is unavailable.
+The server route discovers a race session, retrieves sessions, drivers, laps, positions, intervals, stints, and weather, validates the response shape, and reconstructs a consistent state for every replay lap. The browser engine then evaluates strategy choices without blocking animation or input.
 
-During a controlled failure, the Trust Center calls a server-side probe and demonstrates how strategy software behaves when telemetry becomes slow, duplicated, corrupted, or unavailable. The strategy surface keeps operating on the last verified snapshot and visibly reduces confidence when the input pipeline is degraded.
+## Engineering numbers
 
-The 100,000-path mode runs in ten non-blocking 10,000-path batches so the browser can render progress and convergence between batches. It is intentionally described as a client-side stress test—not as a distributed queue.
+| Measure | Result |
+| --- | ---: |
+| Historical telemetry datasets | 7 |
+| Modeled circuits | 5 |
+| Playable missions | 3 |
+| Standard simulation paths | 1,000 |
+| Stress-test paths | 100,000 |
+| Automated invariant tests | 11 |
+| Failure scenarios | 5 |
+| Outcome interval | 80% |
 
-## Technology
+Measured performance and methodology are documented in [BENCHMARKS.md](docs/BENCHMARKS.md). Assumptions and limits are explicit in the [model card](docs/MODEL_CARD.md), and security boundaries are covered in the [threat model](docs/threat-model.md).
 
-- Next.js-compatible Vinext application
-- React 19 and TypeScript
-- OpenF1 historical telemetry API
-- Monte Carlo simulation engine
-- CSS and SVG data visualization
-- Cloudflare Workers-compatible deployment
-- GitHub Actions build validation and CodeQL security scanning
-- Node test suite for determinism, wet-weather behavior, safety-car impact, explainability, and circuit sensitivity
-- Eleven automated tests covering strategy and gameplay invariants
+## Repository map
 
-## Resilience controls
-
-| Failure | Control | Visible outcome |
-| --- | --- | --- |
-| Upstream outage | Circuit breaker + trusted cache | Dashboard continues in degraded mode |
-| High latency | Backpressure + SLO monitoring | Queue depth rises and confidence falls |
-| Tampered event | Schema and impossible-value validation | Event is rejected before strategy state changes |
-| Replay storm | Idempotency-key deduplication | Duplicate counter rises; one event is processed |
-| Weather-feed loss | Last-known-good observation | Forecast is held and marked degraded |
-
-See [the threat model](docs/threat-model.md) for trust boundaries, abuse cases, and controls.
+```text
+app/                  Next.js interface and race-data route
+components/           Simulator, mission, backtest, and five UI primitives
+lib/                  Strategy engine, game rules, and circuit profiles
+tests/                Determinism and race-behavior invariants
+docs/                 Benchmarks, model card, threat model, and media
+scripts/              Reproducible strategy benchmark
+public/               PitWall favicon
+```
 
 ## Run locally
 
 Requires Node.js 22+ and pnpm.
 
 ```bash
+git clone https://github.com/arisharazakhan-cpu/pitwall-race-strategy-simulator.git
+cd pitwall-race-strategy-simulator
 pnpm install
 pnpm dev
 ```
 
-Run tests, benchmarks, and a production build:
+Open `http://localhost:3000`.
+
+## Verification
 
 ```bash
+pnpm typecheck
 pnpm test
 pnpm benchmark
 pnpm build
 ```
 
-See [benchmark results](docs/BENCHMARKS.md) and the [threat model](docs/threat-model.md).
-The [model card](docs/MODEL_CARD.md) documents scoring, assumptions, reproducibility, and limitations.
+GitHub Actions runs type checking, all tests, a production build, and CodeQL analysis on every push and pull request.
 
-## Data and model disclaimer
+## Data and limitations
 
-Historical data is provided by the community-operated [OpenF1 API](https://openf1.org/). OpenF1 is unofficial and is not associated with Formula One companies or the FIA. PitWall is an educational engineering project, not a reproduction of confidential team strategy software.
+Historical data is provided by the community-operated [OpenF1 API](https://openf1.org/). OpenF1 is unofficial and is not associated with Formula One companies or the FIA. PitWall is an educational engineering project, not confidential team strategy software. Simulation probabilities describe this model and its assumptions; they are not real team forecasts.
+
+## Author
+
+Built by **Arisha Raza** as an end-to-end demonstration of simulation, frontend interaction, cloud-ready API design, observability, testing, and cyber-resilience engineering.
