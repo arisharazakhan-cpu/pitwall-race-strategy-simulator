@@ -108,7 +108,3 @@ GitHub Actions runs type checking, all tests, a production build, and CodeQL ana
 ## Data and limitations
 
 Historical data is provided by the community-operated [OpenF1 API](https://openf1.org/). OpenF1 is unofficial and is not associated with Formula One companies or the FIA. PitWall is an educational engineering project, not confidential team strategy software. Simulation probabilities describe this model and its assumptions; they are not real team forecasts.
-
-## Author
-
-Built by **Arisha Raza** as an end-to-end demonstration of simulation, frontend interaction, cloud-ready API design, observability, testing, and cyber-resilience engineering.
